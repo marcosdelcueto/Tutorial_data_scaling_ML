@@ -9,38 +9,22 @@ from matplotlib import gridspec
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn import preprocessing
 from sklearn.model_selection import LeaveOneOut
-from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neighbors import KNeighborsRegressor, NearestNeighbors
 from sklearn.metrics import mean_squared_error
 from scipy.stats import pearsonr
 ######################################################################################################
 def main():
     # Create {x1,x2,f} dataset every 1.0 from -10 to 10, with a noise of +/- 2
-    #x1,x2,f=generate_data(-10,10,1.0,0.2)
     x1,x2,f=generate_data(20)
     # Prepare X and y for kNN
     X,y = prepare_data_to_kNN(x1,x2,f)
-    print('X:')
-    print(X)
     #k = 3
-    for k in [1,2,3,4,5,6,7,8,9,10]:
+    #for k in [1,2,3,4,5,6,7,8,9,10]:
+    for k in [6]:
         print('k:', k)
         kNN_function_LOO(X,y,k)
         print('##########')
-    kNN_function_LOO(X,y)
-######################################################################################################
-#def generate_data(xmin,xmax,Delta,noise):
-    ## Calculate f=sin(x1)+cos(x2)
-    #x1 = np.arange(xmin,xmax+Delta,Delta)   # generate x1 values from xmin to xmax
-    #x2 = np.arange(100*xmin,100*xmax+100*Delta,100*Delta)   # generate x2 values from xmin to xmax
-    ##x2 = np.arange(xmin,xmax+Delta,Delta)   # generate x2 values from xmin to xmax
-    #x1, x2 = np.meshgrid(x1,x2)             # make x1,x2 grid of points
-    #f = np.sin(x1) + np.cos(x2)             # calculate for all (x1,x2) grid
-    ## Add random noise to f
-    #random.seed(2020)                       # set random seed for reproducibility
-    #for i in range(len(f)):
-        #for j in range(len(f[0])):
-            #f[i][j] = f[i][j] + random.uniform(-noise,noise)  # add random noise to f(x1,x2)
-    #return x1,x2,f
+    #kNN_function_LOO(X,y)
 ######################################################################################################
 def generate_data(N):
     x1 = []
@@ -86,25 +70,39 @@ def kNN_function_LOO(X,y,k=5):
     # Initialize lists with final results
     y_pred_total = []
     y_test_total = []
+    # Scale before
+    X_scaled = X
+    scaler = preprocessing.StandardScaler().fit(X)
+    X_scaled = scaler.transform(X)
+    X = X_scaled
+    print('X:')
+    print(X)
+    print('y:')
+    print(y)
+    ##############
     # Split data into test and train: random state fixed for reproducibility
     loo = LeaveOneOut()
     # kf-fold cross-validation loop
     for train_index, test_index in loo.split(X):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
-        # Scale X_train and X_test
-        scaler = preprocessing.StandardScaler().fit(X_train)
-        #scaler = preprocessing.MinMaxScaler().fit(X_train)
-        X_train_scaled = scaler.transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
-        #X_train_scaled = X_train
-        #X_test_scaled = X_test
         # Fit kNN with (X_train_scaled, y_train), and predict X_test_scaled
         kNN = KNeighborsRegressor(n_neighbors=k, weights='distance') 
-        y_pred = kNN.fit(X_train_scaled, y_train).predict(X_test_scaled)
+        y_pred = kNN.fit(X_train, y_train).predict(X_test)
         # Append y_pred and y_test values of this k-fold step to list with total values
         y_pred_total.append(y_pred)
         y_test_total.append(y_test)
+        if test_index == 59:
+            print('I AM IN CASE 60')
+            print(X_test, y_test)
+            provi_kNN_dist=kNN.kneighbors(X_test)
+            print('provi_kNN_dist:')
+            print(provi_kNN_dist)
+            for i in range(len(provi_kNN_dist[1][0])):
+                #print('dist',provi_kNN_dist[0][i])
+                index = provi_kNN_dist[1][0][i]
+                print('indeces',index, X_train[index], y_train[index])
+            #print('###############')
     # Flatten lists with test and predicted values
     y_pred_total = [item for sublist in y_pred_total for item in sublist]
     y_test_total = [item for sublist in y_test_total for item in sublist]
@@ -133,7 +131,8 @@ def plot_scatter(x,y):
     ax.set_ylim(mi, ma)
     ax.set_aspect('equal')
     ax.plot(np.arange(mi, ma + 0.1, 0.1), np.arange(mi, ma + 0.1, 0.1), color="k", ls="--")
-    ax.annotate(u'$RMSE$ = %.4f' % rmse, xy=(0.15,0.85), xycoords='axes fraction', size=12)
+    ax.annotate(u'$RMSE$ = %.2f' % rmse, xy=(0.05,0.92), xycoords='axes fraction', size=12)
+    ax.annotate(u'$r$ = %.2f' % r, xy=(0.05,0.87), xycoords='axes fraction', size=12)
     file_name="prediction_loo.png"
     plt.savefig(file_name,dpi=600,bbox_inches='tight')
 ######################################################################################################

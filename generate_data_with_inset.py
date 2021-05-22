@@ -1,31 +1,13 @@
 #!/usr/bin/env python3
 # Marcos del Cueto
+import sys
 import math
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 from mpl_toolkits.mplot3d import Axes3D
-
-#def generate_data(xmin,xmax,Delta,noise):
-    ## Calculate f=sin(x1)+cos(x2)
-    #x1 = np.arange(xmin,xmax+Delta,Delta)   # generate x1 values from xmin to xmax
-    #x2 = np.arange(100*xmin,100*xmax+100*Delta,100*Delta)   # generate x2 values from xmin to xmax
-    #### Add noise in x and y too ###
-    #for i in range(len(x1)):
-        #x1[i] = x1[i] + random.uniform(-noise,noise)
-    #for i in range(len(x2)):
-        #x2[i] = x2[i] + random.uniform(-100*noise,100*noise)
-    #print('TEST x1:', x1)
-    #print('TEST x2:', x2)
-    #################################
-    #x1, x2 = np.meshgrid(x1,x2)             # make x1,x2 grid of points
-    #f = np.sin(x1) + np.cos(x2)             # calculate for all (x1,x2) grid
-    ## Add random noise to f
-    #random.seed(2020)                       # set random seed for reproducibility
-    #for i in range(len(f)):
-        #for j in range(len(f[0])):
-            #f[i][j] = f[i][j] + random.uniform(-noise,noise)  # add random noise to f(x1,x2)
-    #return x1,x2,f
+from sklearn import preprocessing
 
 def generate_data(N):
     x1 = []
@@ -52,60 +34,100 @@ def generate_data(N):
         f.append(provi_f)
     return x1,x2,f
 
+def prepare_data_to_kNN(x1,x2,f):
+    X = []
+    for i in range(len(f)):
+        for j in range(len(f)):
+            X_term = []
+            X_term.append(x1[i][j])
+            X_term.append(x2[i][j])
+            X.append(X_term)
+    #y=f.flatten()
+    y = [item for sublist in f for item in sublist]
+    X=np.array(X)
+    y=np.array(y)
+    return X,y 
+
+
 def main():
     # Create {x1,x2,f} dataset every 1.0 from -10 to 10, with a noise of +/- 0.2
-    #x1,y1,f1=generate_data(-10,10,1.0,0.2)
-    x1,y1,f1=generate_data(20)
-    #print('TEST x1:', x1)
-    #print('TEST y1:', y1)
-    #print('TEST f1:', f1)
-    for i in range(len(f1)):
-        for j in range(len(f1[0])):
-            print(x1[i][j], y1[i][j], f1[i][j])
-    
+    x1,x2,f=generate_data(20)
+    X,y = prepare_data_to_kNN(x1,x2,f)
     fig = plt.figure()
     # Right subplot
     ax = fig.add_subplot(1, 2,2)
     ax.set(adjustable='box')
-    points = ax.scatter(x1, y1, c=f1,cmap='viridis',s=60,zorder=1)
+    # Scale x1 and x2
+    scaler = preprocessing.StandardScaler().fit(X)
+    X_scaled = scaler.transform(X)
+    #print('x1:', x1)
+    #print('X[:][0]:', X[:][0])
+    #print('##################')
+    #print('x2:', x2)
+    #print('X[:][1]:', X[:][1])
+    #print('##################')
+    #print('X:', X)
+    #print(type(X))
+    #print('X_T:', np.transpose(X))
+    x1 = np.transpose(X)[0]
+    x2 = np.transpose(X)[1]
+    x1_scaled = np.transpose(X_scaled)[0]
+    x2_scaled = np.transpose(X_scaled)[1]
+    #sys.exit()
+    #x1_scaled = x1
+    #x2_scaled = x2
+    #scaler_x1 = preprocessing.StandardScaler().fit(x1)
+    #scaler_x2 = preprocessing.StandardScaler().fit(x2)
+    #x1_scaled = scaler_x1.transform(x1)
+    #y1_scaled = scaler_y1.transform(y1)
+    #################
+    points = ax.scatter(x1_scaled, x2_scaled, c=f,cmap='viridis',s=60,zorder=1)
     cbar=plt.colorbar(points)
     cbar.set_label("$f(x_1,x_2)$",fontsize=16)
     cbar.ax.tick_params(labelsize=14)
     ax.set_xlabel('$x_1$',fontsize=16)
-    ax.set_xticks(np.arange(-10,12.5,2.5))
-    ax.set_xticklabels(np.arange(-10,12.5,2.5),fontsize=14)
-    ax.set_xlim(-12.2,12.2)
+    #ax.set_xticks(np.arange(-1,1.25,0.25))
+    #ax.set_xticklabels(np.arange(-1,1.25,0.25),fontsize=14)
+    #ax.set_xlim(-1.22,1.22)
     ax.set_ylabel('$x_2$',fontsize=16)
-    ax.set_yticks(np.arange(-1000,1250,250))
-    ax.set_yticklabels(np.arange(-1000,1250,250),fontsize=14)
+    #ax.set_yticks(np.arange(-1.0,1.25,25))
+    #ax.set_yticklabels(np.arange(-1000,1250,250),fontsize=14)
+    # Plot white square
+    rect = patches.Rectangle((-1.9, 1.7), 3.7, -2.10, linewidth=1, edgecolor='w', facecolor='w')
+    ax.add_patch(rect)
     ### Inset ###
-    axins = ax.inset_axes([0.10, 0.035, 0.85, 0.2])
-    axins.scatter(x1, y1, c=f1,cmap='viridis',s=120,zorder=1)
+    #axins = ax.inset_axes([0.12, 0.050, 0.85, 0.2])
+    axins = ax.inset_axes([0.12, 0.45, 0.85, 0.5])
+    axins.scatter(x1_scaled, x2_scaled, c=f,cmap='viridis',s=120,zorder=1)
     # sub region of the original image
-    subx1, subx2, suby1, suby2 = -10.0, 10.0, -300, -200
+    subx1, subx2, suby1, suby2 = -1.45, 1.42, -0.66, -0.43
     axins.set_xlim(subx1, subx2)
     axins.set_ylim(suby1, suby2)
     axins.set_facecolor('0.7')
     ax.indicate_inset_zoom(axins,edgecolor='0.0',facecolor='0.7')
+
     # Left subplot 
     ax1 = fig.add_subplot(1, 2, 1)
     ax1.set(adjustable='box')
-    points1 = ax1.scatter(x1, y1, c=f1,cmap='viridis',s=60,zorder=1)
+    points1 = ax1.scatter(x1, x2, c=f,cmap='viridis',s=60,zorder=1)
     cbar1=plt.colorbar(points1)
     cbar1.set_label("$f(x_1,x_2)$",fontsize=16)
     cbar1.ax.tick_params(labelsize=14)
     ax1.set_xlabel('$x_1$',fontsize=16)
-    ax1.set_xticks(np.arange(-10,12.5,2.5))
-    ax1.set_xticklabels(np.arange(-10,12.5,2.5),fontsize=14)
-    ax1.set_xlim(-12.2,12.2)
+    #ax1.set_xticks(np.arange(-10,12.5,2.5))
+    #ax1.set_xticklabels(np.arange(-10,12.5,2.5),fontsize=14)
+    #ax1.set_xlim(-12.2,12.2)
     ax1.set_ylabel('$x_2$',fontsize=16)
-    ax1.set_yticks(np.arange(-1000,1250,250))
-    ax1.set_yticklabels(np.arange(-1000,1250,250),fontsize=14)
+    #ax1.set_yticks(np.arange(-1000,1250,250))
+    #ax1.set_yticklabels(np.arange(-1000,1250,250),fontsize=14)
+    # Plot white square
+    rect = patches.Rectangle((-10, 970), 20, -1175, linewidth=1, edgecolor='w', facecolor='w')
+    ax1.add_patch(rect)
     ### Inset ###
-    axins1 = ax1.inset_axes([0.10, 0.035, 0.85, 0.2])
-    axins1.scatter(x1, y1, c=f1,cmap='viridis',s=120,zorder=1)
+    axins1 = ax1.inset_axes([0.12, 0.45, 0.85, 0.5])
+    axins1.scatter(x1, x2, c=f,cmap='viridis',s=120,zorder=1)
     # sub region of the original image
-    subx1, subx2, suby1, suby2 = -10.0, 10.0, -300, -200
+    subx1, subx2, suby1, suby2 = -8.0, 8.0, -350, -220
     axins1.set_xlim(subx1, subx2)
     axins1.set_ylim(suby1, suby2)
     axins1.set_facecolor('0.7')
