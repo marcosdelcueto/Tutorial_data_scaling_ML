@@ -1,5 +1,5 @@
 # Tutorial Data Scaling in ML
-This repository contains the code, data and images used in the blog post at https://www.mdelcueto.com/blog/
+This repository contains the code, data and images used in the blog post at https://www.mdelcueto.com/blog/scale-data-for-machine-learning-standardize-features
 
 ---
 ## Contents
